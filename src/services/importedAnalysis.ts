@@ -1,0 +1,5 @@
+import type { ScriptAnalysis } from '../types';
+
+const fields = ['summary','characters','scenes','props','warnings'] as const;
+export function buildChatGptPrompt(source:string,label:string) { return `你是一名影视制片分析师。分析剧本 ${label}，只返回 JSON，不要 Markdown 或说明。JSON 必须严格是：{"summary":"剧情摘要","characters":["人物"],"scenes":["场景"],"props":["道具"],"warnings":["风险或待确认项"]}。\n\n剧本：\n${source}`; }
+export function parseImportedAnalysis(input:string):ScriptAnalysis { let value:unknown; try { value=JSON.parse(input); } catch { throw new Error('导入内容不是有效 JSON'); } if(!value||typeof value!=='object') throw new Error('导入结果必须是 JSON 对象'); const item=value as Record<string,unknown>; for(const key of fields){const v=item[key];if(key==='summary'){if(typeof v!=='string') throw new Error('summary 必须是字符串')}else if(!Array.isArray(v)||v.some(x=>typeof x!=='string')) throw new Error(`${key} 必须是字符串数组`)} return {summary:item.summary as string,characters:item.characters as string[],scenes:item.scenes as string[],props:item.props as string[],warnings:item.warnings as string[]}; }
