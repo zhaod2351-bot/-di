@@ -1,0 +1,2 @@
+import{describe,expect,it}from'vitest';import{analyzeScript,lockVersion,newScriptVersion}from'./scriptAnalysis';import{demoProject}from'../data/demoProject';
+describe('script analysis',()=>{it('rejects an empty script',()=>expect(()=>analyzeScript('')).toThrow());it('locks production data to a version',()=>expect(lockVersion(demoProject,analyzeScript(demoProject.script)).scriptVersion?.status).toBe('locked'));it('creates a draft next version',()=>expect(newScriptVersion(lockVersion(demoProject,analyzeScript(demoProject.script))).scriptVersion?.status).toBe('draft'))});
