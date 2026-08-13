@@ -64,6 +64,21 @@ describe('parseImportedDirectorPlan', () => {
     });
   });
 
+  it('accepts alternate ChatGPT labels for the polished script and shot lists', () => {
+    const alternate = {
+      '润色后完整剧本': '苏林在爆炸后的废城里救出小狐狸。',
+      '剧情概要': '逃离爆炸现场。', '人物': ['苏林'], '场景': ['废弃城市街道'], '道具': ['混合型浓缩炸弹'],
+      '剪辑列表': [{ '名称': '爆炸余波', '剧情概要': '危机收束', '镜头列表': [{
+        '镜头标题': '烟尘中的压迫', '景别': '剪影中景', '时长': '10秒', '画面': '灰尘遮蔽视线。', '运镜': '缓慢推进', '角色动作': '苏林保持站立。',
+        '资产': [{ '类型': '角色', '名称': '苏林' }], '音频': [{ '类型': '音效', '内容': '巨大爆炸声' }],
+      }] }],
+    };
+    expect(parseImportedDirectorPlan(JSON.stringify(alternate))).toMatchObject({
+      polishedScript: '苏林在爆炸后的废城里救出小狐狸。',
+      clips: [{ title: '爆炸余波', shots: [{ title: '烟尘中的压迫', duration: 10, audioItems: [{ kind: '音效', content: '巨大爆炸声' }] }] }],
+    });
+  });
+
   it('keeps same-name assets distinct when their types differ', () => {
     const duplicate = structuredClone(validPlan);
     duplicate.analysis.props = ['苏林'];

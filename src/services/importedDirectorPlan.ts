@@ -20,23 +20,27 @@ export function buildImportedDirectorPrompt(source:string,label:string):string{r
 
 export function parseImportedDirectorPlan(input:string):ImportedDirectorPlan{
   let raw:unknown;try{raw=JSON.parse(input)}catch{throw new Error('导入内容不是有效 JSON')}
-  const root=record(raw,'导入结果'); const polishedScript=text(pick(root,'polishedScript','润色剧本','润色后的剧本','剧本'),'polishedScript'); const analysisRecord=record(root.analysis||{summary:pick(root,'summary','剧情概要','摘要'),characters:pick(root,'characters','人物'),scenes:pick(root,'scenes','场景'),props:pick(root,'props','道具'),warnings:pick(root,'warnings','警告','待确认项')||[]},'analysis');
+  const root=record(raw,'导入结果'); const polishedScript=text(pick(root,'polishedScript','润色剧本','润色后的剧本','润色后完整剧本','润色后的完整剧本','剧本正文','剧本'),'polishedScript'); const analysisRecord=record(root.analysis||{summary:pick(root,'summary','剧情概要','摘要'),characters:pick(root,'characters','人物'),scenes:pick(root,'scenes','场景'),props:pick(root,'props','道具'),warnings:pick(root,'warnings','警告','待确认项')||[]},'analysis');
   const analysis={} as ScriptAnalysis;
   for(const key of analysisFields){const value=analysisRecord[key];if(key==='summary')analysis.summary=text(value,key);else analysis[key]=strings(value,key) as never}
-  if(!Array.isArray(root.clips)||!root.clips.length)throw new Error('clips 必须是至少包含一个 Clip 的数组');
-  const clips=root.clips.map((rawClip,clipIndex)=>{
+  const importedClips=pick(root,'clips','clipList','剪辑列表','分镜列表');
+  if(!Array.isArray(importedClips)||!importedClips.length)throw new Error('clips 必须是至少包含一个 Clip 的数组');
+  const clips=importedClips.map((rawClip,clipIndex)=>{
     const clip=record(rawClip,`clips[${clipIndex}]`);
-    if(!Array.isArray(clip.shots)||!clip.shots.length)throw new Error(`clips[${clipIndex}].shots 必须至少有一个镜头`);
-    const shots=clip.shots.map((rawShot,shotIndex)=>{
+    const importedShots=pick(clip,'shots','镜头列表','镜头');
+    if(!Array.isArray(importedShots)||!importedShots.length)throw new Error(`clips[${clipIndex}].shots 必须至少有一个镜头`);
+    const shots=importedShots.map((rawShot,shotIndex)=>{
       const shot=record(rawShot,`shots[${shotIndex}]`); const duration=durationOf(pick(shot,'duration','时长'),`shots[${shotIndex}].duration`);
-      if(!Array.isArray(shot.audioItems))throw new Error(`shots[${shotIndex}].audioItems 必须是数组`);
-      const audioItems=shot.audioItems.map((rawAudio,audioIndex)=>{
+      const importedAudioItems=pick(shot,'audioItems','音频','声音');
+      if(!Array.isArray(importedAudioItems))throw new Error(`shots[${shotIndex}].audioItems 必须是数组`);
+      const audioItems=importedAudioItems.map((rawAudio,audioIndex)=>{
         const item=record(rawAudio,`audioItems[${audioIndex}]`); const kind=text(pick(item,'kind','type','类型'),`audioItems[${audioIndex}].kind`) as AudioKind;
         if(!audioKinds.includes(kind))throw new Error(`audioItems[${audioIndex}].kind 不支持`);
         return {kind,content:text(pick(item,'content','name','内容'),`audioItems[${audioIndex}].content`),...(typeof pick(item,'speaker','角色','说话人')==='string'&&String(pick(item,'speaker','角色','说话人')).trim()?{speaker:String(pick(item,'speaker','角色','说话人')).trim()}:{})};
       });
-      if(!Array.isArray(shot.assets))throw new Error(`shots[${shotIndex}].assets 必须是数组`);
-      const assets=shot.assets.map((rawAsset,assetIndex)=>{const asset=record(rawAsset,`shots[${shotIndex}].assets[${assetIndex}]`);const type=text(pick(asset,'type','类型'),`assets[${assetIndex}].type`) as AssetType;if(!(['角色','场景','道具'] as AssetType[]).includes(type))throw new Error(`assets[${assetIndex}].type 不支持`);return {type,name:text(pick(asset,'name','名称'),`assets[${assetIndex}].name`)}});
+      const importedAssets=pick(shot,'assets','资产');
+      if(!Array.isArray(importedAssets))throw new Error(`shots[${shotIndex}].assets 必须是数组`);
+      const assets=importedAssets.map((rawAsset,assetIndex)=>{const asset=record(rawAsset,`shots[${shotIndex}].assets[${assetIndex}]`);const type=text(pick(asset,'type','类型'),`assets[${assetIndex}].type`) as AssetType;if(!(['角色','场景','道具'] as AssetType[]).includes(type))throw new Error(`assets[${assetIndex}].type 不支持`);return {type,name:text(pick(asset,'name','名称'),`assets[${assetIndex}].name`)}});
       return {title:text(pick(shot,'title','标题','镜头标题'),`shots[${shotIndex}].title`),size:text(pick(shot,'size','景别'),`shots[${shotIndex}].size`),duration,visual:text(pick(shot,'visual','画面'),`shots[${shotIndex}].visual`),cameraMove:text(pick(shot,'cameraMove','运镜','镜头语言'),`shots[${shotIndex}].cameraMove`),action:text(pick(shot,'action','角色动作','动作'),`shots[${shotIndex}].action`),assets,audioItems};
     });
     return {title:text(pick(clip,'title','name','名称'),`clips[${clipIndex}].title`),summary:text(pick(clip,'summary','摘要','剧情概要'),`clips[${clipIndex}].summary`),shots};
