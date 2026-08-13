@@ -25,11 +25,11 @@ describe('project mutations', () => {
   });
   it('creates, edits and removes clips with their shots', () => {
     const created = createClip(demoProject);
-    const clip = created.clips.at(-1)!;
+    const clip = created.clips[created.clips.length-1];
     const edited = patchClip(created, clip.id, { name: '追逐段', summary: '快速逃离' });
     const withShot = createShot(edited, clip.id);
     const removed = removeClip(withShot, clip.id);
-    expect(edited.clips.at(-1)).toMatchObject({ name: '追逐段', summary: '快速逃离' });
+    expect(edited.clips[edited.clips.length-1]).toMatchObject({ name: '追逐段', summary: '快速逃离' });
     expect(removed.clips.some((item) => item.id === clip.id)).toBe(false);
     expect(removed.shots.some((shot) => shot.clipId === clip.id)).toBe(false);
   });
