@@ -13,12 +13,14 @@ const analysisFields=['summary','characters','scenes','props','warnings'] as con
 const record=(value:unknown,label:string):Record<string,unknown>=>{if(!value||typeof value!=='object'||Array.isArray(value))throw new Error(`${label} 必须是对象`);return value as Record<string,unknown>};
 const text=(value:unknown,label:string)=>{if(typeof value!=='string'||!value.trim())throw new Error(`${label} 必须是非空字符串`);return value.trim()};
 const strings=(value:unknown,label:string)=>{if(!Array.isArray(value)||value.some(item=>typeof item!=='string'||!item.trim()))throw new Error(`${label} 必须是字符串数组`);return value.map(item=>item.trim())};
+const pick=(item:Record<string,unknown>,...keys:string[])=>keys.map(key=>item[key]).find(value=>value!==undefined);
+const durationOf=(value:unknown,label:string)=>{if(typeof value==='number'&&Number.isFinite(value)&&value>0)return value;if(typeof value==='string'){const parsed=Number.parseFloat(value.replace(/[^0-9.]/g,''));if(Number.isFinite(parsed)&&parsed>0)return parsed}throw new Error(`${label} 必须是大于 0 的数字`)};
 
 export function buildImportedDirectorPrompt(source:string,label:string):string{return `你是专业动画导演。请将 ${label} 润色为可制作剧本，并完成完整导演台拆解。只返回原始 JSON，不要 Markdown 或说明。必须严格使用此结构：{"polishedScript":"润色后的完整剧本","analysis":{"summary":"摘要","characters":["人物"],"scenes":["场景"],"props":["道具"],"warnings":["待确认项"]},"clips":[{"title":"Clip 01","summary":"该段目标","shots":[{"title":"镜头标题","size":"远景 WS","duration":5,"visual":"画面内容","cameraMove":"镜头运动","action":"人物动作","assets":[{"type":"角色","name":"资产名称"}],"audioItems":[{"kind":"环境音","content":"声音内容","speaker":"可选角色"}]}]}]}。资产 type 只能是 角色、场景、道具。请保留每个镜头的动作、运镜、音频和资产绑定，不要省略字段。\n\n原始剧本：\n${source}`}
 
 export function parseImportedDirectorPlan(input:string):ImportedDirectorPlan{
   let raw:unknown;try{raw=JSON.parse(input)}catch{throw new Error('导入内容不是有效 JSON')}
-  const root=record(raw,'导入结果'); const polishedScript=text(root.polishedScript,'polishedScript'); const analysisRecord=record(root.analysis,'analysis');
+  const root=record(raw,'导入结果'); const polishedScript=text(pick(root,'polishedScript','润色剧本','润色后的剧本','剧本'),'polishedScript'); const analysisRecord=record(root.analysis||{summary:pick(root,'summary','剧情概要','摘要'),characters:pick(root,'characters','人物'),scenes:pick(root,'scenes','场景'),props:pick(root,'props','道具'),warnings:pick(root,'warnings','警告','待确认项')||[]},'analysis');
   const analysis={} as ScriptAnalysis;
   for(const key of analysisFields){const value=analysisRecord[key];if(key==='summary')analysis.summary=text(value,key);else analysis[key]=strings(value,key) as never}
   if(!Array.isArray(root.clips)||!root.clips.length)throw new Error('clips 必须是至少包含一个 Clip 的数组');
@@ -26,19 +28,18 @@ export function parseImportedDirectorPlan(input:string):ImportedDirectorPlan{
     const clip=record(rawClip,`clips[${clipIndex}]`);
     if(!Array.isArray(clip.shots)||!clip.shots.length)throw new Error(`clips[${clipIndex}].shots 必须至少有一个镜头`);
     const shots=clip.shots.map((rawShot,shotIndex)=>{
-      const shot=record(rawShot,`shots[${shotIndex}]`); const duration=shot.duration;
-      if(typeof duration!=='number'||!Number.isFinite(duration)||duration<=0)throw new Error(`shots[${shotIndex}].duration 必须是大于 0 的数字`);
+      const shot=record(rawShot,`shots[${shotIndex}]`); const duration=durationOf(pick(shot,'duration','时长'),`shots[${shotIndex}].duration`);
       if(!Array.isArray(shot.audioItems))throw new Error(`shots[${shotIndex}].audioItems 必须是数组`);
       const audioItems=shot.audioItems.map((rawAudio,audioIndex)=>{
-        const item=record(rawAudio,`audioItems[${audioIndex}]`); const kind=text(item.kind,`audioItems[${audioIndex}].kind`) as AudioKind;
+        const item=record(rawAudio,`audioItems[${audioIndex}]`); const kind=text(pick(item,'kind','type','类型'),`audioItems[${audioIndex}].kind`) as AudioKind;
         if(!audioKinds.includes(kind))throw new Error(`audioItems[${audioIndex}].kind 不支持`);
-        return {kind,content:text(item.content,`audioItems[${audioIndex}].content`),...(typeof item.speaker==='string'&&item.speaker.trim()?{speaker:item.speaker.trim()}:{})};
+        return {kind,content:text(pick(item,'content','name','内容'),`audioItems[${audioIndex}].content`),...(typeof pick(item,'speaker','角色','说话人')==='string'&&String(pick(item,'speaker','角色','说话人')).trim()?{speaker:String(pick(item,'speaker','角色','说话人')).trim()}:{})};
       });
       if(!Array.isArray(shot.assets))throw new Error(`shots[${shotIndex}].assets 必须是数组`);
-      const assets=shot.assets.map((rawAsset,assetIndex)=>{const asset=record(rawAsset,`shots[${shotIndex}].assets[${assetIndex}]`);const type=text(asset.type,`assets[${assetIndex}].type`) as AssetType;if(!(['角色','场景','道具'] as AssetType[]).includes(type))throw new Error(`assets[${assetIndex}].type 不支持`);return {type,name:text(asset.name,`assets[${assetIndex}].name`)}});
-      return {title:text(shot.title,`shots[${shotIndex}].title`),size:text(shot.size,`shots[${shotIndex}].size`),duration,visual:text(shot.visual,`shots[${shotIndex}].visual`),cameraMove:text(shot.cameraMove,`shots[${shotIndex}].cameraMove`),action:text(shot.action,`shots[${shotIndex}].action`),assets,audioItems};
+      const assets=shot.assets.map((rawAsset,assetIndex)=>{const asset=record(rawAsset,`shots[${shotIndex}].assets[${assetIndex}]`);const type=text(pick(asset,'type','类型'),`assets[${assetIndex}].type`) as AssetType;if(!(['角色','场景','道具'] as AssetType[]).includes(type))throw new Error(`assets[${assetIndex}].type 不支持`);return {type,name:text(pick(asset,'name','名称'),`assets[${assetIndex}].name`)}});
+      return {title:text(pick(shot,'title','标题','镜头标题'),`shots[${shotIndex}].title`),size:text(pick(shot,'size','景别'),`shots[${shotIndex}].size`),duration,visual:text(pick(shot,'visual','画面'),`shots[${shotIndex}].visual`),cameraMove:text(pick(shot,'cameraMove','运镜','镜头语言'),`shots[${shotIndex}].cameraMove`),action:text(pick(shot,'action','角色动作','动作'),`shots[${shotIndex}].action`),assets,audioItems};
     });
-    return {title:text(clip.title,`clips[${clipIndex}].title`),summary:text(clip.summary,`clips[${clipIndex}].summary`),shots};
+    return {title:text(pick(clip,'title','name','名称'),`clips[${clipIndex}].title`),summary:text(pick(clip,'summary','摘要','剧情概要'),`clips[${clipIndex}].summary`),shots};
   });
   return {polishedScript,analysis,clips};
 }

@@ -47,6 +47,23 @@ describe('parseImportedDirectorPlan', () => {
     expect(() => parseImportedDirectorPlan(JSON.stringify(invalid))).toThrow('duration');
   });
 
+  it('converts legacy Chinese director-plan fields into the import format', () => {
+    const legacy = {
+      润色剧本: '苏林在爆炸后的废城里救出小狐狸。',
+      剧情概要: '逃离爆炸现场。', 人物: ['苏林', '小狐狸'], 场景: ['废弃城市街道'], 道具: ['混合型浓缩炸弹'],
+      clips: [{ title: '爆炸余波', summary: '危机收束', shots: [{
+        title: '烟尘中的压迫', 景别: '剪影中景', duration: '10秒', 画面: '灰尘遮蔽视线，嚎梼走向小狐狸。', 运镜: '缓慢推进', 角色动作: '嚎梼保持站立，小狐狸无力挣扎。',
+        assets: [{ type: '角色', name: '嚎梼' }, { type: '场景', name: '废弃城市街道' }],
+        audioItems: [{ type: '音效', name: '巨大爆炸声' }, { type: '环境音', name: '爆炸后的碎石落地声' }],
+      }] }],
+    };
+    expect(parseImportedDirectorPlan(JSON.stringify(legacy))).toMatchObject({
+      polishedScript: '苏林在爆炸后的废城里救出小狐狸。',
+      analysis: { summary: '逃离爆炸现场。', characters: ['苏林', '小狐狸'] },
+      clips: [{ shots: [{ size: '剪影中景', duration: 10, visual: '灰尘遮蔽视线，嚎梼走向小狐狸。', cameraMove: '缓慢推进', action: '嚎梼保持站立，小狐狸无力挣扎。', audioItems: [{ kind: '音效', content: '巨大爆炸声' }, { kind: '环境音', content: '爆炸后的碎石落地声' }] }] }],
+    });
+  });
+
   it('keeps same-name assets distinct when their types differ', () => {
     const duplicate = structuredClone(validPlan);
     duplicate.analysis.props = ['苏林'];
