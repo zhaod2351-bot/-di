@@ -40,8 +40,8 @@ export function generateDirectorData(analysis: ScriptAnalysis, version: ScriptVe
 }
 
 export function applyDirectorGeneration(project: Project, generated: GeneratedDirectorData): Project {
-  const keepAsset = (asset: Asset) => asset.scriptVersionId !== generated.versionId;
-  const keepClip = (clip: Clip) => clip.scriptVersionId !== generated.versionId;
-  const keepShot = (shot: Shot) => shot.scriptVersionId !== generated.versionId;
+  const keepAsset = (asset: Asset) => Boolean(asset.scriptVersionId) && asset.scriptVersionId !== generated.versionId;
+  const keepClip = (clip: Clip) => Boolean(clip.scriptVersionId) && clip.scriptVersionId !== generated.versionId;
+  const keepShot = (shot: Shot) => Boolean(shot.scriptVersionId) && shot.scriptVersionId !== generated.versionId;
   return { ...project, assets: [...project.assets.filter(keepAsset), ...generated.assets], clips: [...project.clips.filter(keepClip), ...generated.clips], shots: [...project.shots.filter(keepShot), ...generated.shots] };
 }
