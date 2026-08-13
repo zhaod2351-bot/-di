@@ -1,5 +1,5 @@
 export type AssetType = '角色' | '场景' | '道具';
-export type Asset = { id:string; type:AssetType; name:string; description:string; tags:string[]; color:string; scriptVersionId?:string };
+export type Asset = { id:string; type:AssetType; name:string; description:string; tags:string[]; color:string; status?:'待完善'|'已完善'; scriptVersionId?:string };
 export type Shot = { id:string; clipId:string; title:string; size:string; duration:number; visual:string; audio:string; assetIds:string[]; scriptVersionId?:string };
 export type Clip = { id:string; name:string; summary:string; scriptVersionId?:string };
 export type ScriptStatus = 'draft'|'analyzing'|'ready'|'locked';
