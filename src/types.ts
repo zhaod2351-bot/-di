@@ -1,6 +1,7 @@
 export type AssetType = '角色' | '场景' | '道具';
 export type ReferenceImage = { id:string; name:string; source:'local-folder'|'browser-storage'; previewUrl:string; createdAt:string; isPrimary:boolean };
-export type Asset = { id:string; type:AssetType; name:string; description:string; tags:string[]; color:string; status?:'待完善'|'已完善'; referenceImages?:ReferenceImage[]; scriptVersionId?:string };
+export type AssetProductionStatus = '待完善'|'已完善'|'已完成';
+export type Asset = { id:string; type:AssetType; name:string; description:string; tags:string[]; color:string; status?:AssetProductionStatus; referenceImages?:ReferenceImage[]; scriptVersionId?:string };
 export type AudioKind = '环境音'|'对白'|'旁白'|'音效'|'音乐';
 export type AudioItem = { id:string; kind:AudioKind; content:string; speaker?:string };
 export type Shot = { id:string; clipId:string; title:string; size:string; duration:number; visual:string; audio:string; cameraMove?:string; action?:string; audioItems?:AudioItem[]; assetIds:string[]; scriptVersionId?:string };

@@ -7,7 +7,8 @@ export function createShot(project: Project, clipId: string): Project {
   const shot: Shot = { id: id('s'), clipId, title: `新镜头 ${number}`, size: '中景 MS', duration: 4, visual: '描述此镜头的画面、动作与镜头运动。', audio: '环境音待补充', assetIds: [] };
   return { ...project, shots: [...project.shots, shot] };
 }
-export function removeAsset(project: Project, assetId: string): Project { return { ...project, assets: project.assets.filter((asset) => asset.id !== assetId) }; }
+export function removeAsset(project: Project, assetId: string): Project { return { ...project, assets: project.assets.filter((asset) => asset.id !== assetId), shots: project.shots.map(shot=>({...shot,assetIds:shot.assetIds.filter(id=>id!==assetId)})) }; }
+export function assetReadiness(asset:Asset):{label:'待填写'|'有描述'|'有参考图'|'可用于生成';score:0|1|2|3}{const described=Boolean(asset.description.trim());const referenced=Boolean(asset.referenceImages?.some(image=>image.isPrimary));if(described&&referenced)return{label:'可用于生成',score:3};if(referenced)return{label:'有参考图',score:2};if(described)return{label:'有描述',score:1};return{label:'待填写',score:0}}
 export function bindAsset(project: Project, shotId: string, assetId: string): Project { return { ...project, shots: project.shots.map((shot) => shot.id === shotId ? { ...shot, assetIds: shot.assetIds.includes(assetId) ? shot.assetIds : [...shot.assetIds, assetId] } : shot) }; }
 export function unbindAsset(project: Project, shotId: string, assetId: string): Project { return { ...project, shots: project.shots.map((shot) => shot.id === shotId ? { ...shot, assetIds: shot.assetIds.filter((id) => id !== assetId) } : shot) }; }
 export function removeShot(project: Project, shotId: string): Project { return { ...project, shots: project.shots.filter((shot) => shot.id !== shotId) }; }

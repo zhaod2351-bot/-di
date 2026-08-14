@@ -1,16 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { demoProject } from '../data/demoProject';
-import { addAudioItem, bindAsset, createClip, createShot, duplicateShot, moveShot, patchClip, patchShot, removeAsset, removeAudioItem, removeClip } from './projectMutations';
+import { addAudioItem, assetReadiness, bindAsset, createClip, createShot, duplicateShot, moveShot, patchClip, patchShot, removeAsset, removeAudioItem, removeClip } from './projectMutations';
 
 describe('project mutations', () => {
   it('creates a new shot for the selected clip', () => {
     const next = createShot(demoProject, 'c1');
     expect(next.shots.filter((shot) => shot.clipId === 'c1')).toHaveLength(4);
   });
-  it('keeps a missing reference when an asset is removed', () => {
+  it('removes a deleted asset from every linked shot', () => {
     const next = removeAsset(demoProject, 'a1');
     expect(next.assets.some((asset) => asset.id === 'a1')).toBe(false);
-    expect(next.shots.find((shot) => shot.id === 's2')?.assetIds).toContain('a1');
+    expect(next.shots.every((shot) => !shot.assetIds.includes('a1'))).toBe(true);
+  });
+  it('derives readiness from a description and primary reference image', () => {
+    const empty = { ...demoProject.assets[0], description: '', referenceImages: [] };
+    const described = { ...empty, description: '黑色短发与机能服。' };
+    const referenced = { ...empty, referenceImages: [{ id: 'ref', name: 'fox.png', source: 'browser-storage' as const, previewUrl: 'blob:fox', createdAt: '2026-08-14', isPrimary: true }] };
+    expect(assetReadiness(empty)).toEqual({ label: '待填写', score: 0 });
+    expect(assetReadiness(described)).toEqual({ label: '有描述', score: 1 });
+    expect(assetReadiness(referenced)).toEqual({ label: '有参考图', score: 2 });
+    expect(assetReadiness({ ...described, referenceImages: referenced.referenceImages })).toEqual({ label: '可用于生成', score: 3 });
   });
   it('binds an asset to a shot once', () => {
     const next = bindAsset(demoProject, 's1', 'a1');
