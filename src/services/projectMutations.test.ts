@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { demoProject } from '../data/demoProject';
-import { addAudioItem, assetReadiness, bindAsset, createClip, createShot, duplicateShot, moveShot, patchClip, patchShot, removeAsset, removeAudioItem, removeClip } from './projectMutations';
+import { addAssetVariant, addAudioItem, assetReadiness, bindAsset, createClip, createShot, duplicateShot, moveShot, patchClip, patchShot, removeAsset, removeAssetVariant, removeAudioItem, removeClip, selectShotAssetVariant } from './projectMutations';
 
 describe('project mutations', () => {
   it('creates a new shot for the selected clip', () => {
@@ -20,6 +20,14 @@ describe('project mutations', () => {
     expect(assetReadiness(described)).toEqual({ label: '有描述', score: 1 });
     expect(assetReadiness(referenced)).toEqual({ label: '有参考图', score: 2 });
     expect(assetReadiness({ ...described, referenceImages: referenced.referenceImages })).toEqual({ label: '可用于生成', score: 3 });
+  });
+  it('assigns a created asset variation to a shot and falls back when it is deleted', () => {
+    const withVariation = addAssetVariant(demoProject, 'a1', { id: 'look-battle', name: '战斗造型', description: '破损机能服。' });
+    const selected = selectShotAssetVariant(withVariation, 's2', 'a1', 'look-battle');
+    expect(selected.shots.find(shot => shot.id === 's2')?.assetVariantIds).toEqual({ a1: 'look-battle' });
+    const removed = removeAssetVariant(selected, 'a1', 'look-battle');
+    expect(removed.assets.find(asset => asset.id === 'a1')?.variants).toEqual([]);
+    expect(removed.shots.find(shot => shot.id === 's2')?.assetVariantIds).toEqual({});
   });
   it('binds an asset to a shot once', () => {
     const next = bindAsset(demoProject, 's1', 'a1');

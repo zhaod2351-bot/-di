@@ -1,4 +1,4 @@
-import type { Asset, AssetType, AudioItem, Clip, Project, Shot } from '../types';
+import type { Asset, AssetType, AssetVariant, AudioItem, Clip, Project, Shot } from '../types';
 
 const id = (prefix: string) => `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -9,6 +9,9 @@ export function createShot(project: Project, clipId: string): Project {
 }
 export function removeAsset(project: Project, assetId: string): Project { return { ...project, assets: project.assets.filter((asset) => asset.id !== assetId), shots: project.shots.map(shot=>({...shot,assetIds:shot.assetIds.filter(id=>id!==assetId)})) }; }
 export function assetReadiness(asset:Asset):{label:'待填写'|'有描述'|'有参考图'|'可用于生成';score:0|1|2|3}{const described=Boolean(asset.description.trim());const referenced=Boolean(asset.referenceImages?.some(image=>image.isPrimary));if(described&&referenced)return{label:'可用于生成',score:3};if(referenced)return{label:'有参考图',score:2};if(described)return{label:'有描述',score:1};return{label:'待填写',score:0}}
+export function addAssetVariant(project:Project,assetId:string,variant:AssetVariant):Project{return{...project,assets:project.assets.map(asset=>asset.id===assetId?{...asset,variants:[...(asset.variants||[]),variant]}:asset)}}
+export function removeAssetVariant(project:Project,assetId:string,variantId:string):Project{return{...project,assets:project.assets.map(asset=>asset.id===assetId?{...asset,variants:(asset.variants||[]).filter(variant=>variant.id!==variantId)}:asset),shots:project.shots.map(shot=>{if(shot.assetVariantIds?.[assetId]!==variantId)return shot;const assetVariantIds={...shot.assetVariantIds};delete assetVariantIds[assetId];return{...shot,assetVariantIds}})}}
+export function selectShotAssetVariant(project:Project,shotId:string,assetId:string,variantId?:string):Project{return{...project,shots:project.shots.map(shot=>{if(shot.id!==shotId)return shot;const assetVariantIds={...(shot.assetVariantIds||{})};if(variantId)assetVariantIds[assetId]=variantId;else delete assetVariantIds[assetId];return{...shot,assetVariantIds}})}}
 export function bindAsset(project: Project, shotId: string, assetId: string): Project { return { ...project, shots: project.shots.map((shot) => shot.id === shotId ? { ...shot, assetIds: shot.assetIds.includes(assetId) ? shot.assetIds : [...shot.assetIds, assetId] } : shot) }; }
 export function unbindAsset(project: Project, shotId: string, assetId: string): Project { return { ...project, shots: project.shots.map((shot) => shot.id === shotId ? { ...shot, assetIds: shot.assetIds.filter((id) => id !== assetId) } : shot) }; }
 export function removeShot(project: Project, shotId: string): Project { return { ...project, shots: project.shots.filter((shot) => shot.id !== shotId) }; }
